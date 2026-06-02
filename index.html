@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enough V2 - Tarayıcı Tabanlı SMS Gönderim Paneli</title>
+    <!-- Google Fonts: Outfit & Space Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --secondary: #06b6d4;
+            --secondary-glow: rgba(6, 182, 212, 0.4);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.4);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.4);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.15) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        /* Loading Screen overlay */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0b0f19;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .loader-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(139, 92, 246, 0.1);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        #loadingText {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        /* Animated glowing background shapes */
+        .glow-orb {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: var(--primary);
+            filter: blur(150px);
+            opacity: 0.12;
+            z-index: -1;
+            pointer-events: none;
+            animation: float 20s infinite alternate;
+        }
+
+        .glow-orb-2 {
+            position: absolute;
+            right: 10%;
+            top: 20%;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: var(--secondary);
+            filter: blur(180px);
+            opacity: 0.1;
+            z-index: -1;
+            pointer-events: none;
+            animation: float 25s infinite alternate-reverse;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 50px) scale(1.2); }
+        }
+
+        header {
+            padding: 2rem 1.5rem 1rem 1.5rem;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .logo-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .logo-text h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #ffffff, #a78bfa, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            backdrop-filter: blur(5px);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            box-shadow: 0 0 8px var(--secondary);
+            animation: pulse-idle 2s infinite;
+        }
+
+        .status-dot.idle {
+            background-color: var(--secondary);
+            box-shadow: 0 0 8px var(--secondary);
+            animation: pulse-idle 2s infinite;
+        }
+
+        @keyframes pulse-idle {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(6, 182, 212, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+        }
+
+        .status-dot.active {
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+            animation: pulse-active 2s infinite;
+        }
+
+        @keyframes pulse-active {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        main {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1rem 1.5rem 3rem 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Stats Row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(12px) saturate(180%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: transparent;
+        }
+
+        .stat-card.stat-success::after { background: var(--success); }
+        .stat-card.stat-fail::after { background: var(--danger); }
+        .stat-card.stat-total::after { background: var(--secondary); }
+        .stat-card.stat-time::after { background: var(--primary); }
+
+        .stat-info h3 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-info p {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .stat-success .stat-icon svg { fill: var(--success); }
+        .stat-fail .stat-icon svg { fill: var(--danger); }
+        .stat-total .stat-icon svg { fill: var(--secondary); }
+        .stat-time .stat-icon svg { fill: var(--primary); }
+
+        /* Dashboard Layout */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Glass Panel */
+        .glass-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(12px) saturate(180%);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 12px;
+            margin-bottom: 4px;
+        }
+
+        .panel-title svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--primary);
+        }
+
+        /* Form styling */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .form-label span {
+            color: var(--text-muted);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            width: 18px;
+            height: 18px;
+            fill: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 14px 12px 42px;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        /* Static Page Info Banner */
+        .info-banner {
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            color: #a5f3fc;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.4;
+        }
+
+        .info-banner svg {
+            width: 16px;
+            height: 16px;
+            fill: var(--secondary);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Range Slider */
+        .range-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .range-slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .range-value {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--primary);
+            font-weight: bold;
+            min-width: 32px;
+            text-align: right;
+        }
+
+        /* Action Buttons */
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            font-family: var(--font-main);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        .btn-start:hover {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            display: none;
+        }
+
+        .btn-stop:hover {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Right Tabs and Screens */
+        .tabs-header {
+            display: flex;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 10px;
+            font-family: var(--font-main);
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .tab-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .tab-content {
+            display: none;
+            flex-grow: 1;
+            min-height: 480px;
+            flex-direction: column;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Live Console Styling */
+        .console-container {
+            background: #05070c;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 16px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding-bottom: 8px;
+        }
+
+        .console-dot-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .console-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .console-dot:nth-child(1) { background-color: #ef4444; }
+        .console-dot:nth-child(2) { background-color: #f59e0b; }
+        .console-dot:nth-child(3) { background-color: #10b981; }
+
+        .console-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .console-ctrl-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .console-ctrl-btn:hover {
+            color: var(--text-main);
+        }
+
+        .console-ctrl-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        .console-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            line-height: 1.5;
+            padding: 8px;
+            max-height: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            scroll-behavior: smooth;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .log-time {
+            color: #4b5563;
+            flex-shrink: 0;
+        }
+
+        .log-badge {
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .log-badge.success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .log-badge.fail {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .log-text {
+            word-break: break-all;
+        }
+        
+        .log-text.success { color: #10b981; }
+        .log-text.fail { color: #f87171; }
+
+        .console-welcome {
+            color: #6b7280;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 12px;
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .console-welcome svg {
+            width: 48px;
+            height: 48px;
+            fill: #374151;
+        }
+
+        /* Service Selection Styling */
+        .services-search-bar {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-input {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+        }
+
+        .select-all-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .select-all-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+            overflow-y: auto;
+            max-height: 420px;
+            padding: 4px;
+        }
+
+        .service-item {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .service-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .service-item.selected {
+            background: rgba(139, 92, 246, 0.08);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .service-checkbox {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .service-item.selected .service-checkbox {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .service-checkbox svg {
+            width: 10px;
+            height: 10px;
+            fill: white;
+            display: none;
+        }
+
+        .service-item.selected .service-checkbox svg {
+            display: block;
+        }
+
+        .service-name {
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: #4b5563;
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="loader-spinner"></div>
+        <div id="loadingText">WebAssembly & Pyodide hazırlanıyor...</div>
+    </div>
+
+    <div class="glow-orb"></div>
+    <div class="glow-orb-2"></div>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v7H5l7 8h4v5l7-11z" d="M11 21h-1l1.5-7.5h-5.5l8-11.5v1h1l-1.5 7.5h5.5l-8 11.5z"/>
+                </svg>
+            </div>
+            <div class="logo-text">
+                <h1>ENOUGH V2</h1>
+                <p>Tarayıcıda Çalışan Python Sürümü</p>
+            </div>
+        </div>
+        <div class="server-status">
+            <div class="status-dot idle" id="serverStatusDot"></div>
+            <span id="serverStatusText">Beklemede</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card stat-total">
+                <div class="stat-info">
+                    <h3>Toplam Gönderim</h3>
+                    <p id="statTotal">0</p>
+                </div>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </div>
+            </div>
+            <div class="stat-card stat-success">
+                <div class="stat-info">
+                    <h3>Başarılı</h3>
+                    <p id="statSuccess">0</p>
+                </div>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </div>
+            </div>
+            <div class="stat-card stat-fail">
+                <div class="stat-info">
+                    <h3>Başarısız</h3>
+                    <p id="statFail">0</p>
+                </div>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </div>
+            </div>
+            <div class="stat-card stat-time">
+                <div class="stat-info">
+                    <h3>Geçen Süre</h3>
+                    <p id="statTime">00:00</p>
+                </div>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Layout -->
+        <div class="dashboard-layout">
+            <!-- Left Side: Config Form -->
+            <div class="glass-panel">
+                <div class="panel-title">
+                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    <span>Gönderim Ayarları</span>
+                </div>
+
+                <div class="info-banner">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.47 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    <div>
+                        <strong>BİLGİ:</strong> Python kodu tarayıcınızda (WASM) çalışır. CORS engeli <code>corsproxy.io</code> üzerinden otomatik olarak aşılır.
+                    </div>
+                </div>
+
+                <!-- Phone -->
+                <div class="form-group">
+                    <label class="form-label" for="phoneInput">Telefon Numarası * <span>(Başına +90 koymayın)</span></label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                        <input type="text" id="phoneInput" class="form-input" placeholder="5XXXXXXXXX" maxlength="10">
+                    </div>
+                </div>
+
+                <!-- Mail -->
+                <div class="form-group">
+                    <label class="form-label" for="mailInput">E-Posta Adresi <span>(Boşsa otomatik oluşturulur)</span></label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                        <input type="email" id="mailInput" class="form-input" placeholder="ornek@mail.com">
+                    </div>
+                </div>
+
+                <!-- SMS Count -->
+                <div class="form-group">
+                    <label class="form-label" for="countInput">Gönderilecek Adet <span>(Sonsuz için 0 yazın)</span></label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+                        <input type="number" id="countInput" class="form-input" value="0" min="0">
+                    </div>
+                </div>
+
+                <!-- Interval Slider -->
+                <div class="form-group" id="intervalGroup">
+                    <label class="form-label" for="intervalInput">
+                        Gönderim Aralığı (Saniye)
+                    </label>
+                    <div class="range-wrapper">
+                        <input type="range" id="intervalInput" class="range-slider" min="0" max="10" step="0.5" value="1.0">
+                        <span id="intervalValue" class="range-value">1.0</span>
+                    </div>
+                </div>
+
+                <!-- Start / Stop Button -->
+                <div class="button-group">
+                    <button class="btn btn-start" id="btnStart">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <span>Gönderimi Başlat</span>
+                    </button>
+                    <button class="btn btn-stop" id="btnStop">
+                        <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        <span>Gönderimi Durdur</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Side: Live Logs & Service Selector -->
+            <div class="glass-panel">
+                <div class="tabs-header">
+                    <button class="tab-btn active" id="tabConsoleBtn">
+                        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 12H5v-2h6v2zm4-4H5V8h10v4z"/></svg>
+                        <span>Canlı Konsol</span>
+                    </button>
+                    <button class="tab-btn" id="tabServicesBtn">
+                        <svg viewBox="0 0 24 24"><path d="M4 15h16v-2H4v2zm0 4h16v-2H4v2zm0-8h16V9H4v2zm0-6v2h16V5H4z"/></svg>
+                        <span>Servis Listesi (<span id="selectedServicesCount">Tümü</span>)</span>
+                    </button>
+                </div>
+
+                <!-- Tab: Console -->
+                <div class="tab-content active" id="tabConsole">
+                    <div class="console-container">
+                        <div class="console-header">
+                            <div class="console-dot-group">
+                                <div class="console-dot"></div>
+                                <div class="console-dot"></div>
+                                <div class="console-dot"></div>
+                            </div>
+                            <div class="console-controls">
+                                <button class="console-ctrl-btn" id="consoleAutoScroll">
+                                    <svg viewBox="0 0 24 24"><path d="M19 13h-6V7h-2v6H5l7 7 7-7z"/></svg>
+                                    <span>Oto Kaydır</span>
+                                </button>
+                                <button class="console-ctrl-btn" id="consoleClear">
+                                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                    <span>Temizle</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="console-body" id="consoleBody">
+                            <div class="console-welcome" id="consoleWelcome">
+                                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 12H5v-2h6v2zm4-4H5V8h10v4z"/></svg>
+                                <p>Henüz gönderim başlatılmadı.<br>Ayarları yapıp "Gönderimi Başlat" butonuna tıklayınız.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Services -->
+                <div class="tab-content" id="tabServices">
+                    <div class="services-search-bar">
+                        <input type="text" id="searchServiceInput" class="search-input" placeholder="Servis Ara...">
+                        <button class="select-all-btn" id="btnToggleAllServices">Hepsini Kaldır</button>
+                    </div>
+                    <div class="services-grid" id="servicesGrid">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Enough V2 - Tarayıcıda (WASM) Çalışan Python Sürümü &copy; 2026.</p>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        
+        const serverStatusDot = document.getElementById('serverStatusDot');
+        const serverStatusText = document.getElementById('serverStatusText');
+        const statTotal = document.getElementById('statTotal');
+        const statSuccess = document.getElementById('statSuccess');
+        const statFail = document.getElementById('statFail');
+        const statTime = document.getElementById('statTime');
+
+        const phoneInput = document.getElementById('phoneInput');
+        const mailInput = document.getElementById('mailInput');
+        const countInput = document.getElementById('countInput');
+        const intervalInput = document.getElementById('intervalInput');
+        const intervalValue = document.getElementById('intervalValue');
+
+        const btnStart = document.getElementById('btnStart');
+        const btnStop = document.getElementById('btnStop');
+
+        const tabConsoleBtn = document.getElementById('tabConsoleBtn');
+        const tabServicesBtn = document.getElementById('tabServicesBtn');
+        const tabConsole = document.getElementById('tabConsole');
+        const tabServices = document.getElementById('tabServices');
+
+        const consoleBody = document.getElementById('consoleBody');
+        const consoleWelcome = document.getElementById('consoleWelcome');
+        const consoleClear = document.getElementById('consoleClear');
+        const consoleAutoScroll = document.getElementById('consoleAutoScroll');
+        
+        const searchServiceInput = document.getElementById('searchServiceInput');
+        const btnToggleAllServices = document.getElementById('btnToggleAllServices');
+        const servicesGrid = document.getElementById('servicesGrid');
+        const selectedServicesCount = document.getElementById('selectedServicesCount');
+
+        // State variables
+        let isRunning = false;
+        let elapsedSeconds = 0;
+        let timerInterval = null;
+        let autoScroll = true;
+        let allServicesList = [];
+        let selectedServices = new Set();
+        
+        let successCount = 0;
+        let failCount = 0;
+        let totalSent = 0;
+
+        // Initialize Web Worker
+        let worker = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            initWorker();
+        });
+
+        async function initWorker() {
+            try {
+                // Fetch enoughv2.py source code
+                loadingText.textContent = "Python dosyası alınıyor...";
+                const res = await fetch('enoughv2.py');
+                if (!res.ok) throw new Error("enoughv2.py bulunamadı!");
+                const pythonCode = await res.text();
+
+                // Create worker
+                worker = new Worker('worker.js');
+                
+                // Initialize worker with enoughv2.py code
+                worker.postMessage({
+                    type: 'init',
+                    data: { code: pythonCode }
+                });
+
+                // Listen for messages from Pyodide Worker
+                worker.onmessage = function(event) {
+                    const { type, text, services, error } = event.data;
+                    
+                    if (type === 'status') {
+                        loadingText.textContent = text;
+                    }
+                    else if (type === 'ready') {
+                        loadingOverlay.style.display = 'none';
+                        allServicesList = services;
+                        allServicesList.forEach(s => selectedServices.add(s));
+                        updateServicesUI();
+                    }
+                    else if (type === 'log') {
+                        appendLog(text);
+                    }
+                    else if (type === 'finished' || type === 'stopped') {
+                        handleStopUI();
+                    }
+                    else if (type === 'error') {
+                        alert("Pyodide Hatası: " + error);
+                        loadingText.textContent = "Hata oluştu: " + error;
+                        handleStopUI();
+                    }
+                };
+
+            } catch (err) {
+                loadingText.textContent = "Yükleme hatası: " + err.message;
+                alert("Kurulum sırasında hata oluştu. Lütfen sayfayı yenileyiniz.");
+            }
+        }
+
+        // Tab Switching
+        tabConsoleBtn.addEventListener('click', () => {
+            tabConsoleBtn.classList.add('active');
+            tabServicesBtn.classList.remove('active');
+            tabConsole.classList.add('active');
+            tabServices.classList.remove('active');
+        });
+
+        tabServicesBtn.addEventListener('click', () => {
+            tabServicesBtn.classList.add('active');
+            tabConsoleBtn.classList.remove('active');
+            tabServices.classList.add('active');
+            tabConsole.classList.remove('active');
+        });
+
+        // Sliders change event
+        intervalInput.addEventListener('input', (e) => {
+            intervalValue.textContent = e.target.value;
+        });
+
+        // Console controls
+        consoleClear.addEventListener('click', () => {
+            const logs = consoleBody.querySelectorAll('.log-entry');
+            logs.forEach(l => l.remove());
+            if (consoleBody.querySelectorAll('.log-entry').length === 0) {
+                consoleWelcome.style.display = 'flex';
+            }
+        });
+
+        consoleAutoScroll.addEventListener('click', () => {
+            autoScroll = !autoScroll;
+            consoleAutoScroll.style.color = autoScroll ? 'var(--success)' : 'var(--text-muted)';
+        });
+
+        // Render services grid
+        function updateServicesUI() {
+            servicesGrid.innerHTML = '';
+            const filterText = searchServiceInput.value.toLowerCase();
+            
+            allServicesList.forEach(service => {
+                if (filterText && !service.toLowerCase().includes(filterText)) {
+                    return;
+                }
+                
+                const isSelected = selectedServices.has(service);
+                const item = document.createElement('div');
+                item.className = `service-item ${isSelected ? 'selected' : ''}`;
+                
+                item.innerHTML = `
+                    <div class="service-checkbox">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </div>
+                    <span class="service-name">${service}</span>
+                `;
+                
+                item.addEventListener('click', () => {
+                    if (selectedServices.has(service)) {
+                        selectedServices.delete(service);
+                    } else {
+                        selectedServices.add(service);
+                    }
+                    updateServicesCountBadge();
+                    updateServicesUI();
+                });
+                
+                servicesGrid.appendChild(item);
+            });
+
+            updateServicesCountBadge();
+        }
+
+        function updateServicesCountBadge() {
+            if (selectedServices.size === allServicesList.length) {
+                selectedServicesCount.textContent = "Tümü";
+                btnToggleAllServices.textContent = "Hepsini Kaldır";
+            } else if (selectedServices.size === 0) {
+                selectedServicesCount.textContent = "Hiçbiri";
+                btnToggleAllServices.textContent = "Hepsini Seç";
+            } else {
+                selectedServicesCount.textContent = `${selectedServices.size}/${allServicesList.length}`;
+                btnToggleAllServices.textContent = "Hepsini Seç";
+            }
+        }
+
+        // Toggle all services
+        btnToggleAllServices.addEventListener('click', () => {
+            if (selectedServices.size === allServicesList.length) {
+                selectedServices.clear();
+            } else {
+                allServicesList.forEach(s => selectedServices.add(s));
+            }
+            updateServicesUI();
+        });
+
+        searchServiceInput.addEventListener('input', updateServicesUI);
+
+        // Start bombing
+        btnStart.addEventListener('click', () => {
+            const phone = phoneInput.value.trim();
+            if (!phone || phone.length !== 10 || isNaN(phone)) {
+                alert("Lütfen geçerli bir telefon numarası giriniz (Başında sıfır olmadan 10 hane: 5XXXXXXXXX).");
+                return;
+            }
+
+            const mail = mailInput.value.trim();
+            const count = parseInt(countInput.value) || 0;
+            const interval = parseFloat(intervalInput.value) || 1.0;
+
+            // Reset counters
+            successCount = 0;
+            failCount = 0;
+            totalSent = 0;
+            elapsedSeconds = 0;
+            
+            statTotal.textContent = "0";
+            statSuccess.textContent = "0";
+            statFail.textContent = "0";
+            statTime.textContent = "00:00";
+            
+            consoleWelcome.style.display = 'none';
+
+            // Update UI state
+            isRunning = true;
+            serverStatusDot.className = 'status-dot active';
+            serverStatusText.textContent = 'Gönderiliyor';
+            
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'flex';
+            btnStop.disabled = false;
+
+            phoneInput.disabled = true;
+            mailInput.disabled = true;
+            countInput.disabled = true;
+            intervalInput.disabled = true;
+
+            // Start JS timer
+            timerInterval = setInterval(() => {
+                elapsedSeconds++;
+                const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+                const secs = String(elapsedSeconds % 60).padStart(2, '0');
+                statTime.textContent = `${mins}:${secs}`;
+            }, 1000);
+
+            // Send start signal to Web Worker
+            worker.postMessage({
+                type: 'start',
+                data: {
+                    phone,
+                    mail,
+                    count,
+                    interval,
+                    services: Array.from(selectedServices)
+                }
+            });
+        });
+
+        // Stop bombing
+        btnStop.addEventListener('click', () => {
+            btnStop.disabled = true;
+            worker.postMessage({ type: 'stop' });
+        });
+
+        function handleStopUI() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            
+            serverStatusDot.className = 'status-dot idle';
+            serverStatusText.textContent = 'Beklemede';
+            
+            btnStart.style.display = 'flex';
+            btnStart.disabled = false;
+            btnStop.style.display = 'none';
+
+            phoneInput.disabled = false;
+            mailInput.disabled = false;
+            countInput.disabled = false;
+            intervalInput.disabled = false;
+        }
+
+        // Process and append logs to UI console
+        function appendLog(rawText) {
+            // Strip ANSI colors
+            const cleanText = rawText.replace(/\x1b\[[0-9;]*m/g, '');
+            
+            const isSuccess = cleanText.includes("Başarılı") || cleanText.includes("[+]");
+            const isFailure = cleanText.includes("Başarısız") || cleanText.includes("[-]");
+            
+            if (isSuccess) {
+                successCount++;
+                totalSent++;
+                updateCounterAnimation('statSuccess', successCount);
+                updateCounterAnimation('statTotal', totalSent);
+            } else if (isFailure) {
+                failCount++;
+                totalSent++;
+                updateCounterAnimation('statFail', failCount);
+                updateCounterAnimation('statTotal', totalSent);
+            }
+
+            const timeStr = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const badgeClass = isSuccess ? 'success' : 'fail';
+            const textClass = isSuccess ? 'success' : 'fail';
+            const badgeLabel = isSuccess ? 'Ok' : 'Hata';
+            
+            entry.innerHTML = `
+                <span class="log-time">[${timeStr}]</span>
+                <span class="log-badge ${badgeClass}">${badgeLabel}</span>
+                <span class="log-text ${textClass}">${cleanText}</span>
+            `;
+            
+            consoleBody.appendChild(entry);
+            
+            if (autoScroll) {
+                consoleBody.scrollTop = consoleBody.scrollHeight;
+            }
+        }
+
+        function updateCounterAnimation(elementId, newValue) {
+            const el = document.getElementById(elementId);
+            el.textContent = newValue;
+            el.style.transform = 'scale(1.1)';
+            el.style.color = '#fff';
+            setTimeout(() => {
+                el.style.transform = 'scale(1)';
+                el.style.color = '';
+            }, 150);
+        }
+    </script>
+</body>
+</html>
