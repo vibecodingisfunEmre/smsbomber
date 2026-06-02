@@ -15,11 +15,12 @@ self.onmessage = async function(e) {
             self.postMessage({ type: 'status', text: 'Paket yükleyici (micropip) hazırlanıyor...' });
             await pyodide.loadPackage('micropip');
             
-            self.postMessage({ type: 'status', text: 'Gerekli kütüphaneler kuruluyor (requests)...' });
+            self.postMessage({ type: 'status', text: 'Gerekli kütüphaneler kuruluyor (requests, colorama)...' });
             await pyodide.runPythonAsync(`
                 import micropip
                 await micropip.install('requests')
                 await micropip.install('pyodide-http')
+                await micropip.install('colorama')
             `);
             
             self.postMessage({ type: 'status', text: 'CORS Proxy yaması uygulanıyor...' });
