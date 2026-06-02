@@ -945,6 +945,37 @@
                     </div>
                 </div>
 
+                <!-- Threads Slider -->
+                <div class="form-group">
+                    <label class="form-label" for="threadsInput">
+                        Thread Sayısı (Eşzamanlı İş Parçacığı)
+                    </label>
+                    <div class="range-wrapper">
+                        <input type="range" id="threadsInput" class="range-slider" min="1" max="100" step="1" value="10">
+                        <span id="threadsValue" class="range-value">10</span>
+                    </div>
+                </div>
+
+                <!-- Turbo Mode Toggle -->
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="toggle-title">Turbo Mod</div>
+                        <div class="toggle-desc">Süre aralığı olmaksızın en hızlı şekilde gönderir</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="turboInput">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Warning Banner for Turbo Mode -->
+                <div class="warning-banner" id="turboWarning">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.47 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    <div>
+                        <strong>UYARI:</strong> Turbo mod, sistem kaynaklarını yoğun şekilde tüketebilir ve hedef numaranın operatörü tarafından geçici engellemelere sebep olabilir.
+                    </div>
+                </div>
+
                 <!-- Start / Stop Button -->
                 <div class="button-group">
                     <button class="btn btn-start" id="btnStart">
@@ -1035,6 +1066,11 @@
         const countInput = document.getElementById('countInput');
         const intervalInput = document.getElementById('intervalInput');
         const intervalValue = document.getElementById('intervalValue');
+        const threadsInput = document.getElementById('threadsInput');
+        const threadsValue = document.getElementById('threadsValue');
+        const turboInput = document.getElementById('turboInput');
+        const turboWarning = document.getElementById('turboWarning');
+        const intervalGroup = document.getElementById('intervalGroup');
 
         const btnStart = document.getElementById('btnStart');
         const btnStop = document.getElementById('btnStop');
@@ -1142,6 +1178,22 @@
             intervalValue.textContent = e.target.value;
         });
 
+        threadsInput.addEventListener('input', (e) => {
+            threadsValue.textContent = e.target.value;
+        });
+
+        turboInput.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                turboWarning.style.display = 'flex';
+                intervalGroup.style.opacity = '0.5';
+                intervalInput.disabled = true;
+            } else {
+                turboWarning.style.display = 'none';
+                intervalGroup.style.opacity = '1';
+                intervalInput.disabled = false;
+            }
+        });
+
         // Console controls
         consoleClear.addEventListener('click', () => {
             const logs = consoleBody.querySelectorAll('.log-entry');
@@ -1229,6 +1281,8 @@
             const mail = mailInput.value.trim();
             const count = parseInt(countInput.value) || 0;
             const interval = parseFloat(intervalInput.value) || 1.0;
+            const threads = parseInt(threadsInput.value) || 10;
+            const turbo = turboInput.checked;
 
             // Reset counters
             successCount = 0;
@@ -1256,6 +1310,8 @@
             mailInput.disabled = true;
             countInput.disabled = true;
             intervalInput.disabled = true;
+            threadsInput.disabled = true;
+            turboInput.disabled = true;
 
             // Start JS timer
             timerInterval = setInterval(() => {
@@ -1273,6 +1329,8 @@
                     mail,
                     count,
                     interval,
+                    threads,
+                    turbo,
                     services: Array.from(selectedServices)
                 }
             });
@@ -1298,7 +1356,11 @@
             phoneInput.disabled = false;
             mailInput.disabled = false;
             countInput.disabled = false;
-            intervalInput.disabled = false;
+            if (!turboInput.checked) {
+                intervalInput.disabled = false;
+            }
+            threadsInput.disabled = false;
+            turboInput.disabled = false;
         }
 
         // Process and append logs to UI console
