@@ -23,8 +23,22 @@ self.onmessage = async function(e) {
                 await micropip.install('colorama')
             `);
             
-            self.postMessage({ type: 'status', text: 'CORS Proxy yaması uygulanıyor...' });
+            self.postMessage({ type: 'status', text: 'Sistem modülleri yamalanıyor (Subprocess, OS)...' });
             await pyodide.runPythonAsync(`
+                import sys
+                import types
+                import os
+                
+                # Mock subprocess to avoid OSError: emscripten does not support processes
+                subprocess_mock = types.ModuleType("subprocess")
+                subprocess_mock.check_call = lambda *args, **kwargs: 0
+                subprocess_mock.call = lambda *args, **kwargs: 0
+                subprocess_mock.PIPE = -1
+                sys.modules["subprocess"] = subprocess_mock
+                
+                # Mock os.system to avoid errors when trying to clear terminal
+                os.system = lambda *args, **kwargs: 0
+                
                 import pyodide_http
                 pyodide_http.patch_all()
                 
