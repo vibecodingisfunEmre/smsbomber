@@ -1081,8 +1081,8 @@
                 if (!res.ok) throw new Error("enoughv2.py bulunamadı!");
                 const pythonCode = await res.text();
 
-                // Create worker
-                worker = new Worker('worker.js');
+                // Create worker with cache busting query parameter
+                worker = new Worker('worker.js?v=' + Date.now());
                 
                 // Initialize worker with enoughv2.py code
                 worker.postMessage({
