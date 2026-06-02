@@ -95,6 +95,7 @@ self.onmessage = async function(e) {
                 import builtins
                 import time
                 import re
+                import math
                 from enoughv2 import SendSms, split_services, servisler_sms
                 from concurrent.futures import ThreadPoolExecutor, wait
                 
@@ -112,38 +113,65 @@ self.onmessage = async function(e) {
                 if not selected_services:
                     selected_services = servisler_sms
                 
-                def run_loop():
-                    global running
-                    target_limit = ${count}
-                    aralik = ${interval}
+                target_limit = ${count}
+                if target_limit == 0:
+                    target_limit = None
                     
+                aralik = ${interval}
+                threads = ${threads}
+                turbo = ${turbo}
+                
+                def run_services_web(sms, service_list, target_count=None, interval=0):
+                    global running
                     while running:
-                        for service in selected_services:
+                        for service in service_list:
                             if not running:
-                                break
-                            if target_limit > 0 and sms.adet >= target_limit:
+                                return
+                            if target_count is not None and sms.adet >= target_count:
                                 send_log_to_js("Gönderim adeti limitine ulaşıldı.")
                                 running = False
-                                break
-                                
+                                return
+                            
                             try:
                                 method = getattr(sms, service)
                                 method()
                             except Exception as e:
                                 print(f"[-] Hata! {service} çağrılırken hata: {str(e)}")
                                 
-                            if aralik > 0:
-                                # Sleep in smaller chunks to remain responsive to stop command
+                            if interval > 0:
                                 sleep_start = time.time()
-                                while time.time() - sleep_start < aralik:
+                                while time.time() - sleep_start < interval:
                                     if not running:
                                         return
                                     time.sleep(0.05)
                                     
-                        if target_limit > 0 and sms.adet >= target_limit:
-                            break
-                            
-                run_loop()
+                        if target_count is not None and sms.adet >= target_count:
+                            running = False
+                            return
+
+                def run_turbo_web(sms, service_list, thread_count):
+                    global running
+                    service_chunks = split_services(service_list, thread_count)
+                    while running:
+                        with ThreadPoolExecutor(max_workers=thread_count) as executor:
+                            futures = []
+                            for chunk in service_chunks:
+                                for service in chunk:
+                                    if not running:
+                                        break
+                                    futures.append(executor.submit(getattr(sms, service)))
+                            wait(futures)
+                        time.sleep(0.1)
+
+                if turbo:
+                    run_turbo_web(sms, selected_services, threads)
+                else:
+                    service_chunks = split_services(selected_services, threads)
+                    with ThreadPoolExecutor(max_workers=threads) as executor:
+                        futures = []
+                        for chunk in service_chunks:
+                            futures.append(executor.submit(run_services_web, sms, chunk, target_limit, aralik))
+                        wait(futures)
             `);
             
             self.postMessage({ type: 'finished' });
